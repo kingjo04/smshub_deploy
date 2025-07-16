@@ -1,204 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SMSHub Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📱 SMSHub Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/script.js" defer></script>
 </head>
-<body class="bg-gray-100 text-gray-900">
+<body class="min-h-screen">
+    <header class="bg-blue-700 text-white p-4 shadow-lg">
+        <h1 class="text-2xl font-bold">📱 SMSHub Dashboard</h1>
+        <p class="text-sm">Beli & kelola nomor SMS dengan mudah</p>
+    </header>
 
-<div class="max-w-6xl mx-auto p-6">
-  <!-- Header -->
-  <header class="text-center mb-6">
-    <h1 class="text-3xl font-bold text-indigo-600">📱 SMSHub Dashboard</h1>
-    <p class="text-sm text-gray-600">Beli & kelola nomor SMS dengan mudah</p>
-    <p id="balance" class="mt-2 text-green-600 font-semibold"></p>
-  </header>
+    <main class="container mx-auto p-4">
+        <div class="flex flex-col md:flex-row gap-4 mb-6">
+            <div class="flex-1">
+                <select id="serviceSelect" class="w-full p-2 rounded-lg border">
+                    <option value="">Pilih layanan</option>
+                    <!-- Diisi via API -->
+                </select>
+            </div>
+            <div class="flex-1">
+                <select id="countrySelect" class="w-full p-2 rounded-lg border">
+                    <option value="">Pilih negara</option>
+                    <!-- Diisi via API -->
+                </select>
+            </div>
+            <button id="createOrderBtn" class="btn w-full md:w-auto">🆕 Buat Order Baru</button>
+        </div>
 
-  <!-- Form -->
-  <section class="bg-white rounded-xl shadow-md p-6 mb-8">
-    <form id="orderForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700">Layanan</label>
-        <select id="service" class="w-full mt-1 p-2 border rounded" required>
-          <option value="">Pilih layanan</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700">Negara</label>
-        <select id="country" class="w-full mt-1 p-2 border rounded" required>
-          <option value="">Pilih negara</option>
-        </select>
-      </div>
-      <div class="md:col-span-2">
-        <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded hover:bg-indigo-700 transition">
-          🔐 Dapatkan Nomor
-        </button>
-      </div>
-    </form>
-  </section>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="card">
+                <h2 class="text-xl font-semibold mb-2">Order Aktif</h2>
+                <div class="table-container">
+                    <table class="table" id="activeOrders">
+                        <thead>
+                            <tr>
+                                <th>Nomor</th>
+                                <th>Layanan</th>
+                                <th>Negara</th>
+                                <th>Status</th>
+                                <th>Sisa Waktu</th>
+                                <th>Tanggal</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
 
-  <!-- Active Orders -->
-  <section class="bg-white rounded-xl shadow-md p-6 mb-6">
-    <h2 class="text-lg font-semibold mb-4">Order Aktif</h2>
-    <div class="overflow-x-auto">
-      <table class="w-full table-auto text-sm text-left">
-        <thead class="bg-gray-200">
-          <tr>
-            <th class="px-4 py-2">Nomor</th>
-            <th class="px-4 py-2">Layanan</th>
-            <th class="px-4 py-2">Negara</th>
-            <th class="px-4 py-2">Status</th>
-            <th class="px-4 py-2">Sisa Waktu</th>
-            <th class="px-4 py-2">Tanggal</th>
-            <th class="px-4 py-2">Aksi</th>
-          </tr>
-        </thead>
-        <tbody id="ordersTableBody"></tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- History -->
-  <section class="bg-white rounded-xl shadow-md p-6">
-    <div class="flex items-center justify-between cursor-pointer" onclick="toggleHistory()" id="toggleHistoryBtn">
-      <h2 class="text-lg font-semibold">Riwayat Order</h2>
-      <span id="historyIcon">🔽</span>
-    </div>
-    <div id="historySection" class="mt-4 hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full table-auto text-sm text-left">
-          <thead class="bg-gray-200">
-            <tr>
-              <th class="px-4 py-2">Nomor</th>
-              <th class="px-4 py-2">Layanan</th>
-              <th class="px-4 py-2">Negara</th>
-              <th class="px-4 py-2">Status</th>
-              <th class="px-4 py-2">Tanggal</th>
-              <th class="px-4 py-2">SMS</th>
-            </tr>
-          </thead>
-          <tbody id="historyTableBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-</div>
-
-<script>
-  async function fetchBalance() {
-    const res = await fetch('/api/balance');
-    const data = await res.json();
-    if (data.success) {
-      document.getElementById('balance').textContent = 'Saldo: $' + data.balance;
-    }
-  }
-
-  async function fetchServices() {
-    const res = await fetch('/api/services');
-    const data = await res.json();
-    const select = document.getElementById('service');
-    Object.entries(data).forEach(([code, name]) => {
-      const opt = document.createElement('option');
-      opt.value = code;
-      opt.textContent = name;
-      select.appendChild(opt);
-    });
-  }
-
-  async function fetchCountries() {
-    const res = await fetch('/api/countries');
-    const data = await res.json();
-    const select = document.getElementById('country');
-    Object.entries(data).forEach(([code, name]) => {
-      const opt = document.createElement('option');
-      opt.value = code;
-      opt.textContent = name;
-      select.appendChild(opt);
-    });
-  }
-
-  async function loadOrders() {
-    const res = await fetch('/api/orders');
-    const data = await res.json();
-    const tbody = document.getElementById('ordersTableBody');
-    const historyTbody = document.getElementById('historyTableBody');
-    tbody.innerHTML = '';
-    historyTbody.innerHTML = '';
-
-    data.active_orders.forEach(order => {
-      const sisaMs = 20 * 60 * 1000 - (Date.now() - new Date(order.created_at).getTime());
-      const sisaMenit = Math.max(0, Math.floor(sisaMs / 60000)) + 'm';
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td class="px-4 py-2">${order.number}</td>
-        <td class="px-4 py-2">${order.service}</td>
-        <td class="px-4 py-2">${order.country}</td>
-        <td class="px-4 py-2">
-          <span class="inline-block px-2 py-1 rounded text-white text-xs ${order.status === 'WAITING' ? 'bg-yellow-500' : order.status === 'COMPLETED' ? 'bg-green-600' : 'bg-gray-400'}">
-            ${order.status}
-          </span>
-        </td>
-        <td class="px-4 py-2">${sisaMenit}</td>
-        <td class="px-4 py-2">${new Date(order.created_at).toLocaleString()}</td>
-        <td class="px-4 py-2">
-          <button class="text-blue-600 hover:underline" onclick="requestAgain('${order.id}')">Minta Ulang SMS</button>
-          <button class="text-red-600 hover:underline ml-2" onclick="cancelOrder('${order.id}')">Cancel</button>
-        </td>
-      `;
-      tbody.appendChild(row);
-    });
-
-    data.history_orders.forEach(order => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td class="px-4 py-2">${order.number}</td>
-        <td class="px-4 py-2">${order.service}</td>
-        <td class="px-4 py-2">${order.country}</td>
-        <td class="px-4 py-2">${order.status}</td>
-        <td class="px-4 py-2">${new Date(order.created_at).toLocaleString()}</td>
-        <td class="px-4 py-2">${order.sms || '-'}</td>
-      `;
-      historyTbody.appendChild(row);
-    });
-  }
-
-  function cancelOrder(id) {
-    fetch(`/api/cancel/${id}`, {method: 'POST'}).then(() => loadOrders());
-  }
-
-  function requestAgain(id) {
-    fetch(`/api/request_again/${id}`, {method: 'POST'})
-      .then(res => res.json())
-      .then(() => loadOrders());
-  }
-
-  document.getElementById('orderForm').addEventListener('submit', function (e) {
-    e.preventDefault();
-    const service = document.getElementById('service').value;
-    const country = document.getElementById('country').value;
-    fetch('/api/create', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({service, country})
-    })
-    .then(res => res.json())
-    .then(() => loadOrders());
-  });
-
-  function toggleHistory() {
-    const section = document.getElementById('historySection');
-    const icon = document.getElementById('historyIcon');
-    section.classList.toggle('hidden');
-    icon.textContent = section.classList.contains('hidden') ? '🔽' : '🔼';
-  }
-
-  fetchBalance();
-  fetchServices();
-  fetchCountries();
-  loadOrders();
-</script>
-
+            <div class="card">
+                <h2 class="text-xl font-semibold mb-2">Riwayat Order <span id="toggleHistory" class="text-blue-600 cursor-pointer">🔽</span></h2>
+                <div class="table-container">
+                    <table class="table" id="historyOrders">
+                        <thead>
+                            <tr>
+                                <th>Nomor</th>
+                                <th>Layanan</th>
+                                <th>Negara</th>
+                                <th>Status</th>
+                                <th>Tanggal</th>
+                                <th>SMS</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <button id="refreshBtn" class="btn mt-4">🔄 Refresh</button>
+    </main>
 </body>
 </html>
