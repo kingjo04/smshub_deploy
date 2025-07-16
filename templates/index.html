@@ -1,428 +1,145 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>SMSHub Real-Timed</title>
-    <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #f5f5f5;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .balance {
-            font-weight: bold;
-        }
-        .controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        select, button {
-            padding: 10px;
-            font-size: 16px;
-        }
-        .order-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .order-card {
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 15px;
-        }
-        .order-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-        .order-id {
-            font-weight: bold;
-        }
-        .order-body {
-            margin-bottom: 10px;
-        }
-        .status-box {
-            margin-bottom: 10px;
-        }
-        .sms-box {
-            background-color: #f9f9f9;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        .notification {
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
-            text-align: center;
-            display: none;
-        }
-        .notification.success {
-            background-color: #d4edda;
-            color: #155724;
-            display: block;
-        }
-        .notification.error {
-            background-color: #f8d7da;
-            color: #721c24;
-            display: block;
-        }
-        .countdown {
-            font-size: 14px;
-            color: #666;
-            margin-top: 5px;
-        }
-        .copy-buttons {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 10px;
-        }
-        .copy-buttons button {
-            padding: 6px 12px;
-            background: #e0e0e0;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-        }
-        .request-again-btn {
-            background: #4CAF50 !important;
-            color: white;
-        }
-        .delete-btn {
-            background: #ff4d4d !important;
-            color: white;
-        }
-    </style>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SMSHub Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <div class="container">
-        <header>
-            <h1>🔥 SMSHub Real-Timed</h1>
-            <div class="balance">
-                Saldo: <span id="balance">Loading...</span>
-            </div>
-        </header>
+<body class="bg-gray-100 text-gray-900">
 
-        <div class="controls">
-            <select id="serviceSelect">
-                <option value="">Pilih Layanan</option>
-                <option value="go">Google</option>
-                <option value="ni">Gojek</option>
-                <option value="wa">Whatsapp</option>
-                <option value="bnu">Qpon</option>
-                <option value="tg">Telegram</option>
-                <option value="eh">Telegram 2.0</option>
-            </select>
-            <select id="countrySelect">
-                <option value="">Pilih Negara</option>
-                <option value="6">Indonesia</option>
-                <option value="0">Russia</option>
-                <option value="3">China</option>
-            </select>
-            <button onclick="createOrder()">🚀 Buat Order Baru</button>
+  <div class="max-w-6xl mx-auto p-6">
+    <!-- Header -->
+    <header class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-indigo-600">📱 SMSHub Dashboard</h1>
+      <p class="text-sm text-gray-600">Beli & kelola nomor SMS dengan mudah</p>
+    </header>
+
+    <!-- Form -->
+    <section class="bg-white rounded-xl shadow-md p-6 mb-8">
+      <form id="orderForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Layanan</label>
+          <select id="service" class="w-full mt-1 p-2 border rounded">
+            <option value="">Pilih layanan</option>
+          </select>
         </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Negara</label>
+          <select id="country" class="w-full mt-1 p-2 border rounded">
+            <option value="">Pilih negara</option>
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded hover:bg-indigo-700 transition">
+            🔐 Dapatkan Nomor
+          </button>
+        </div>
+      </form>
+    </section>
 
-        <!-- Notifikasi inline -->
-        <div id="notification" class="notification"></div>
+    <!-- Orders Table -->
+    <section class="bg-white rounded-xl shadow-md p-6">
+      <h2 class="text-lg font-semibold mb-4">Riwayat Pemesanan</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full table-auto text-sm text-left">
+          <thead class="bg-gray-200">
+            <tr>
+              <th class="px-4 py-2">Nomor</th>
+              <th class="px-4 py-2">Layanan</th>
+              <th class="px-4 py-2">Negara</th>
+              <th class="px-4 py-2">Status</th>
+              <th class="px-4 py-2">Tanggal</th>
+              <th class="px-4 py-2">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="ordersTableBody">
+            <!-- Data diisi dari JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
 
-        <div class="order-list" id="orderList"></div>
-    </div>
+  <script>
+    // Fetch daftar layanan
+    fetch('/api/services').then(res => res.json()).then(data => {
+      const select = document.getElementById('service');
+      Object.entries(data).forEach(([code, name]) => {
+        const opt = document.createElement('option');
+        opt.value = code;
+        opt.textContent = name;
+        select.appendChild(opt);
+      });
+    });
 
-    <script>
-        let activeTrackers = {};
+    // Fetch daftar negara
+    fetch('/api/countries').then(res => res.json()).then(data => {
+      const select = document.getElementById('country');
+      Object.entries(data).forEach(([code, name]) => {
+        const opt = document.createElement('option');
+        opt.value = code;
+        opt.textContent = name;
+        select.appendChild(opt);
+      });
+    });
 
-        // Fungsi untuk menampilkan notifikasi inline
-        function showNotification(message, isSuccess = true) {
-            const notification = document.getElementById('notification');
-            notification.textContent = message;
-            notification.className = `notification ${isSuccess ? 'success' : 'error'}`;
-            setTimeout(() => {
-                notification.textContent = '';
-                notification.className = 'notification';
-            }, 3000);
-        }
-
-        // 1. Load Balance
-        async function loadBalance() {
-            try {
-                const response = await fetch('/api/balance');
-                const data = await response.json();
-                document.getElementById('balance').textContent = 
-                    data.success ? data.balance : 'Error';
-            } catch(error) {
-                console.error('Balance error:', error);
-            }
-        }
-
-        // 2. Create Order
-        async function createOrder() {
-            const service = document.getElementById('serviceSelect').value;
-            const country = document.getElementById('countrySelect').value;
-            if(!service || !country) return showNotification('Pilih layanan dan negara dulu!', false);
-
-            const btn = document.querySelector('button');
-            btn.disabled = true;
-            btn.innerHTML = '⏳ Memproses...';
-
-            try {
-                const response = await fetch('/api/create', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ service, country })
-                });
-                
-                const data = await response.json();
-                
-                if(data.success) {
-                    addOrderCard(data.order);
-                    startStatusTracker(data.order.id);
-                    showNotification(`✅ Order #${data.order.id} dibuat!`);
-                    loadBalance(); // Update balance setelah membuat order
-                } else {
-                    showNotification(`❌ Error: ${data.error}`, false);
-                }
-            } catch(error) {
-                showNotification('⚠️ Koneksi error!', false);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '🚀 Buat Order Baru';
-            }
-        }
-
-        // 3. Add Order Card
-        function addOrderCard(order) {
-            const countryCode = getCountryCode(order.country);
-            const card = document.createElement('div');
-            card.className = 'order-card';
-            card.id = `order-${order.id}`;
-            card.innerHTML = `
-                <div class="order-header">
-                    <div class="order-id">#${order.id}</div>
-                    <div class="order-number">${order.number}</div>
-                </div>
-                <div class="order-body">
-                    <div class="status-box">
-                        <span>Status:</span>
-                        <span class="status">${order.status}</span>
-                    </div>
-                    <div class="countdown">Waktu tersisa: <span class="time-left"></span></div>
-                    <div class="sms-box"></div>
-                </div>
-                <div class="order-footer">
-                    <div class="copy-buttons">
-                        <button onclick="copyNumber('${order.number}', true, '${countryCode}')">
-                            Salin ${countryCode}
-                        </button>
-                        <button onclick="copyNumber('${order.number}', false, '${countryCode}')">
-                            Salin tanpa ${countryCode}
-                        </button>
-                        <button onclick="copyNumberWithFullPrefix('${order.number}', '${countryCode}')">
-                            Salin +${countryCode}
-                        </button>
-                    </div>
-                    <div class="action-buttons">
-                        <button class="cancel-btn" onclick="cancelOrder('${order.id}')">❌ Batalkan</button>
-                        <button class="request-again-btn" onclick="requestAgain('${order.id}')">🔄 Minta Ulang SMS</button>
-                        <button class="delete-btn" onclick="deleteOrder('${order.id}')">🗑️ Hapus</button>
-                    </div>
-                </div>
+    // Fetch orders dan tampilkan
+    function loadOrders() {
+      fetch('/api/orders')
+        .then(res => res.json())
+        .then(data => {
+          const tbody = document.getElementById('ordersTableBody');
+          tbody.innerHTML = '';
+          data.orders.forEach(order => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td class="px-4 py-2">${order.number}</td>
+              <td class="px-4 py-2">${order.service}</td>
+              <td class="px-4 py-2">${order.country}</td>
+              <td class="px-4 py-2">
+                <span class="inline-block px-2 py-1 rounded text-white text-xs ${order.status === 'WAITING' ? 'bg-yellow-500' : order.status === 'COMPLETED' ? 'bg-green-600' : 'bg-gray-400'}">
+                  ${order.status}
+                </span>
+              </td>
+              <td class="px-4 py-2">${new Date(order.created_at).toLocaleString()}</td>
+              <td class="px-4 py-2">
+                <button class="text-blue-600 hover:underline" onclick="getStatus('${order.id}')">Cek</button>
+                <button class="text-red-600 hover:underline ml-2" onclick="cancelOrder('${order.id}')">Cancel</button>
+              </td>
             `;
-            // Tambahkan order baru ke bawah
-            document.getElementById('orderList').appendChild(card);
-            startCountdown(order.id, new Date(order.created_at));
-        }
+            tbody.appendChild(row);
+          });
+        });
+    }
 
-        // 4. Countdown Timer
-        function startCountdown(orderId, createdAt) {
-            const endTime = new Date(createdAt.getTime() + 20 * 60 * 1000); // 20 menit
-            const interval = setInterval(() => {
-                const now = new Date();
-                const timeLeft = endTime - now;
+    loadOrders();
 
-                if (timeLeft <= 0) {
-                    clearInterval(interval);
-                    const timeLeftEl = document.querySelector(`#order-${orderId} .time-left`);
-                    if (timeLeftEl) {
-                        timeLeftEl.textContent = 'Waktu habis';
-                    }
-                } else {
-                    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-                    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-                    const timeLeftEl = document.querySelector(`#order-${orderId} .time-left`);
-                    if (timeLeftEl) {
-                        timeLeftEl.textContent = `${Math.floor(minutes)}:${seconds < 10 ? '0' : ''}${seconds}`;
-                    }
-                }
-            }, 1000); // Update setiap 1 detik
-        }
+    // Submit form
+    document.getElementById('orderForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const service = document.getElementById('service').value;
+      const country = document.getElementById('country').value;
+      fetch('/api/create', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({service, country})
+      })
+        .then(res => res.json())
+        .then(() => loadOrders());
+    });
 
-        // 5. Status Tracker
-        function startStatusTracker(orderId) {
-            const interval = setInterval(async () => {
-                try {
-                    const response = await fetch(`/api/status/${orderId}`);
-                    const data = await response.json();
-                    
-                    const statusEl = document.querySelector(`#order-${orderId} .status`);
-                    const smsBox = document.querySelector(`#order-${orderId} .sms-box`);
+    function getStatus(id) {
+      fetch(`/api/status/${id}`)
+        .then(res => res.json())
+        .then(data => alert("Status: " + data.status + (data.sms ? `\nSMS: ${data.sms}` : "")));
+    }
 
-                    // Update status
-                    if(data.status === 'COMPLETED') {
-                        statusEl.innerHTML = '✅ SMS Diterima';
-                        smsBox.innerHTML = `<div class="sms">${data.sms}</div>`;
-                        clearInterval(interval);
-                        delete activeTrackers[orderId];
-                    } 
-                    else if(data.status === 'STATUS_WAIT_CODE') {
-                        statusEl.innerHTML = '🕒 Menunggu SMS...';
-                    }
-                    else if(data.status === 'STATUS_CANCEL') {
-                        statusEl.innerHTML = '❌ Dibatalkan';
-                        clearInterval(interval);
-                        delete activeTrackers[orderId];
-                    }
-                    else {
-                        statusEl.innerHTML = data.status;
-                    }
+    function cancelOrder(id) {
+      fetch(`/api/cancel/${id}`, {method: 'POST'})
+        .then(() => loadOrders());
+    }
+  </script>
 
-                } catch(error) {
-                    console.error('Tracking error:', error);
-                }
-            }, 2000);  // Update setiap 2 detik
-
-            activeTrackers[orderId] = interval;
-        }
-
-        // 6. Cancel Order
-        async function cancelOrder(orderId) {
-            if((`Yakin batalkan order ${orderId}?`)) {
-                try {
-                    const response = await fetch(`/api/cancel/${orderId}`, { method: 'POST' });
-                    const data = await response.json();
-                    
-                    if(data.success) {
-                        const card = document.getElementById(`order-${orderId}`);
-                        if(card) card.remove();
-                        if(activeTrackers[orderId]) {
-                            clearInterval(activeTrackers[orderId]);
-                            delete activeTrackers[orderId];
-                        }
-                        // Hapus dari file txt
-                        await fetch(`/api/remove_order/${orderId}`, { method: 'POST' });
-                    }
-                } catch(error) {
-                    showNotification('Gagal membatalkan order', false);
-                }
-            }
-        }
-
-        // 7. Minta Ulang SMS
-        async function requestAgain(orderId) {
-            try {
-                const response = await fetch(`/api/request_again/${orderId}`, { method: 'POST' });
-                const data = await response.json();
-                
-                if(data.success) {
-                    // Refresh status order
-                    const statusEl = document.querySelector(`#order-${orderId} .status`);
-                    if (statusEl) {
-                        statusEl.innerHTML = '🕒 Menunggu SMS...';
-                    }
-                } else {
-                    const statusEl = document.querySelector(`#order-${orderId} .status`);
-                    if (statusEl) {
-                        statusEl.innerHTML = '🕒 Menunggu SMS...';
-                    }
-                }
-            } catch(error) {
-                showNotification('⚠️ Koneksi error!', false);
-            }
-        }
-
-
-        // 8. Hapus Order
-        async function deleteOrder(orderId) {
-            if((`Yakin hapus order ${orderId}?`)) {
-                try {
-                    const response = await fetch(`/api/remove_order/${orderId}`, { method: 'POST' });
-                    const data = await response.json();
-                    
-                    if(data.success) {
-                        const card = document.getElementById(`order-${orderId}`);
-                        if(card) card.remove();
-                        if(activeTrackers[orderId]) {
-                            clearInterval(activeTrackers[orderId]);
-                            delete activeTrackers[orderId];
-                        }
-                        showNotification(`✅ Order #${orderId} berhasil dihapus!`);
-                    }
-                } catch(error) {
-                    showNotification('Gagal menghapus order', false);
-                }
-            }
-        }
-
-        // 9. Salin Nomor
-        function copyNumber(number, withPrefix, countryCode) {
-            let numberToCopy = number;
-            if (!withPrefix) {
-                numberToCopy = number.replace(new RegExp(`^${countryCode}`), '');
-            }
-            navigator.clipboard.writeText(numberToCopy);
-        }
-
-        // 10. Salin Nomor dengan Kode Negara Lengkap (+ di Awal)
-        function copyNumberWithFullPrefix(number, countryCode) {
-            let numberToCopy = number;
-            if (!numberToCopy.startsWith('+')) {
-                numberToCopy = `+${countryCode}${numberToCopy.replace(new RegExp(`^${countryCode}`), '')}`;
-            }
-            navigator.clipboard.writeText(numberToCopy);
-        }
-
-        // 11. Get Country Code
-        function getCountryCode(country) {
-            return country === '6' ? '62' : '7';  // Indonesia: 62, Russia: 7
-        }
-
-        // 12. Load Orders from Server
-        async function loadOrders() {
-            try {
-                const response = await fetch('/api/orders');
-                const data = await response.json();
-                if (data.success) {
-                    data.orders.forEach(order => {
-                        addOrderCard(order);
-                        if (order.status === 'WAITING') {
-                            startStatusTracker(order.id);
-                        }
-                    });
-                }
-            } catch(error) {
-                console.error('Error loading orders:', error);
-            }
-        }
-
-        // Initial Load
-        loadBalance();
-        loadOrders();
-    </script>
 </body>
 </html>
