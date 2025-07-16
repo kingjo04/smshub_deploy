@@ -1,11 +1,20 @@
 // Event Listeners
-document.getElementById('createOrderBtn').addEventListener('click', createOrder);
-document.getElementById('refreshBtn').addEventListener('click', updateStatuses);
+document.addEventListener('DOMContentLoaded', () => {
+    const createOrderBtn = document.getElementById('createOrderBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+    if (createOrderBtn) createOrderBtn.addEventListener('click', createOrder);
+    if (refreshBtn) refreshBtn.addEventListener('click', updateStatuses);
+});
 
 // Fungsi utama
 async function createOrder() {
+    const btn = document.getElementById('createOrderBtn');
+    if (!btn) {
+        showNotification('❌ Error: Tombol Buat Order tidak ditemukan', 'error');
+        return;
+    }
+
     try {
-        const btn = document.getElementById('createOrderBtn');
         btn.innerHTML = '⏳ Membuat...';
         btn.disabled = true;
 
@@ -30,16 +39,24 @@ async function createOrder() {
         fetchOrders();
         
     } catch (error) {
-        showNotification(`❌ Error: ${error}`, 'error');
+        showNotification(`❌ Error: ${error.message || error}`, 'error');
     } finally {
-        const btn = document.getElementById('createOrderBtn');
-        btn.innerHTML = '🆕 Buat Order Baru';
-        btn.disabled = false;
+        if (btn) {
+            btn.innerHTML = '🆕 Buat Order Baru';
+            btn.disabled = false;
+        }
     }
 }
 
 // Fungsi update status real-time
 function updateStatuses() {
+    const activeTable = document.getElementById('activeOrders');
+    const historyTable = document.getElementById('historyOrders');
+    if (!activeTable || !historyTable) {
+        showNotification('❌ Error: Tabel order tidak ditemukan', 'error');
+        return;
+    }
+
     fetch('/api/orders')
         .then(response => response.json())
         .then(data => {
@@ -61,17 +78,21 @@ function showNotification(message, type) {
 
 // Fungsi update tabel
 function updateOrderTable(orders, tableId) {
-    const tableBody = document.getElementById(tableId).getElementsByTagName('tbody')[0];
+    const tableBody = document.getElementById(tableId)?.getElementsByTagName('tbody')[0];
+    if (!tableBody) {
+        showNotification(`❌ Error: Bagian tabel ${tableId} tidak ditemukan`, 'error');
+        return;
+    }
     tableBody.innerHTML = '';
     orders.forEach(order => {
         const row = tableBody.insertRow();
         row.innerHTML = `
-            <td>${order.number}</td>
-            <td>${order.service}</td>
-            <td>${order.country}</td>
-            <td>${order.status}</td>
-            <td id="timer-${order.id}">${calculateRemainingTime(order.expires_at)}</td>
-            <td>${new Date(order.created_at).toLocaleString()}</td>
+            <td>${order.number || '-'}</td>
+            <td>${order.service || '-'}</td>
+            <td>${order.country || '-'}</td>
+            <td>${order.status || '-'}</td>
+            <td id="timer-${order.id}">${calculateRemainingTime(order.expires_at) || '-'}</td>
+            <td>${new Date(order.created_at).toLocaleString() || '-'}</td>
             ${tableId === 'historyOrders' ? `<td>${order.sms_code || '-'}</td>` : '<td><button onclick="cancelOrder(\'' + order.id + '\')">Batal</button></td>'}
         `;
     });
@@ -79,6 +100,7 @@ function updateOrderTable(orders, tableId) {
 
 // Fungsi hitung sisa waktu
 function calculateRemainingTime(expiresAt) {
+    if (!expiresAt) return 'Waktu Tidak Tersedia';
     const now = new Date();
     const expires = new Date(expiresAt);
     const diff = expires - now;
@@ -99,7 +121,10 @@ function startRealtimeTimer() {
             fetch(`/api/order/${orderId}`)
                 .then(response => response.json())
                 .then(order => {
-                    timer.textContent = calculateRemainingTime(order.expires_at);
+                    if (timer) timer.textContent = calculateRemainingTime(order.expires_at);
+                })
+                .catch(() => {
+                    if (timer) timer.textContent = 'Error';
                 });
         }, 1000); // Update tiap 1 detik
     });
@@ -130,5 +155,7 @@ function startAutoRefresh() {
 }
 
 // Initialize
-fetchOrders();
-startAutoRefresh();
+document.addEventListener('DOMContentLoaded', () => {
+    fetchOrders();
+    startAutoRefresh();
+});
