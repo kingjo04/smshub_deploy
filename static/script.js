@@ -2,6 +2,40 @@
 document.getElementById('createOrderBtn').addEventListener('click', createOrder);
 document.getElementById('refreshBtn').addEventListener('click', updateStatuses);
 
+// Fungsi inisialisasi dropdown
+async function populateDropdowns() {
+    try {
+        const [servicesResponse, countriesResponse] = await Promise.all([
+            fetch('/api/all_services'),
+            fetch('/api/all_countries')
+        ]);
+        const services = await servicesResponse.json();
+        const countries = await countriesResponse.json();
+
+        const serviceSelect = document.getElementById('serviceSelect');
+        const countrySelect = document.getElementById('countrySelect');
+
+        if (services.success) {
+            services.services.forEach(service => {
+                const option = document.createElement('option');
+                option.value = service;
+                option.textContent = SERVICES[service] || service;
+                serviceSelect.appendChild(option);
+            });
+        }
+        if (countries.success) {
+            countries.countries.forEach(country => {
+                const option = document.createElement('option');
+                option.value = country;
+                option.textContent = COUNTRIES[country] || country;
+                countrySelect.appendChild(option);
+            });
+        }
+    } catch (error) {
+        showNotification(`❌ Error memuat dropdown: ${error}`, 'error');
+    }
+}
+
 // Fungsi utama
 async function createOrder() {
     try {
@@ -9,12 +43,18 @@ async function createOrder() {
         btn.innerHTML = '⏳ Membuat...';
         btn.disabled = true;
 
+        const service = document.getElementById('serviceSelect').value;
+        const country = document.getElementById('countrySelect').value;
+        if (!service || !country) {
+            throw new Error('Pilih layanan dan negara terlebih dahulu');
+        }
+
         const response = await fetch('/api/create', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ service: 'go', country: '6' }) // Tambahin country biar sesuai API
+            body: JSON.stringify({ service, country })
         });
         
         const result = await response.json();
@@ -66,8 +106,7 @@ function updateOrderTable(orders, tableId) {
             <td>${order.status}</td>
             <td id="timer-${order.id}">${calculateRemainingTime(order.expires_at)}</td>
             <td>${new Date(order.created_at).toLocaleString()}</td>
-            <td>${order.sms_code || '-'}</td>
-            <td><button onclick="cancelOrder('${order.id}')">Batal</button></td>
+            ${tableId === 'historyOrders' ? `<td>${order.sms_code || '-'}</td>` : '<td><button onclick="cancelOrder(\'' + order.id + '\')">Batal</button></td>'}
         `;
     });
 }
@@ -125,5 +164,6 @@ function startAutoRefresh() {
 }
 
 // Initialize
+populateDropdowns();
 fetchOrders();
 startAutoRefresh();
