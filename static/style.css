@@ -4,7 +4,7 @@
 
 @layer base {
     body {
-        @apply bg-gradient-to-br from-blue-100 to-indigo-200 text-gray-800;
+        @apply bg-gray-100 text-gray-800;
     }
 }
 
@@ -20,30 +20,22 @@
     @apply bg-red-100 text-red-800;
 }
 
-.card {
-    @apply bg-white rounded-xl shadow-lg p-4 mb-4 hover:shadow-xl transition-all duration-300;
+table {
+    @apply w-full text-sm text-left;
 }
 
-.table-container {
-    @apply overflow-x-auto;
+thead {
+    @apply bg-blue-600 text-white;
 }
 
-.table {
-    @apply w-full text-sm text-left text-gray-700;
+th, td {
+    @apply p-2 border-b;
 }
 
-.table th {
-    @apply bg-blue-600 text-white p-2;
+button {
+    @apply px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors;
 }
 
-.table td {
-    @apply border-b p-2;
-}
-
-.btn {
-    @apply px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all duration-300;
-}
-
-.btn:disabled {
+button:disabled {
     @apply bg-gray-400 cursor-not-allowed;
 }
