@@ -8,40 +8,64 @@
 </head>
 <body class="bg-gray-100 text-gray-900">
 
-  <div class="max-w-6xl mx-auto p-6 space-y-6">
-    <!-- Header -->
-    <header class="text-center">
-      <h1 class="text-3xl font-bold text-indigo-600">📱 SMSHub Dashboard</h1>
-      <p class="text-sm text-gray-600">Beli & kelola nomor SMS dengan mudah</p>
-      <div id="balance" class="mt-2 text-green-600 font-semibold"></div>
-    </header>
+<div class="max-w-6xl mx-auto p-6">
+  <!-- Header -->
+  <header class="text-center mb-6">
+    <h1 class="text-3xl font-bold text-indigo-600">📱 SMSHub Dashboard</h1>
+    <p class="text-sm text-gray-600">Beli & kelola nomor SMS dengan mudah</p>
+    <p id="balance" class="mt-2 text-green-600 font-semibold"></p>
+  </header>
 
-    <!-- Form -->
-    <section class="bg-white rounded-xl shadow-md p-6">
-      <form id="orderForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Layanan</label>
-          <select id="service" class="w-full mt-1 p-2 border rounded">
-            <option value="">Pilih layanan</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Negara</label>
-          <select id="country" class="w-full mt-1 p-2 border rounded">
-            <option value="">Pilih negara</option>
-          </select>
-        </div>
-        <div class="md:col-span-2">
-          <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded hover:bg-indigo-700 transition">
-            🔐 Dapatkan Nomor
-          </button>
-        </div>
-      </form>
-    </section>
+  <!-- Form -->
+  <section class="bg-white rounded-xl shadow-md p-6 mb-8">
+    <form id="orderForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Layanan</label>
+        <select id="service" class="w-full mt-1 p-2 border rounded" required>
+          <option value="">Pilih layanan</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Negara</label>
+        <select id="country" class="w-full mt-1 p-2 border rounded" required>
+          <option value="">Pilih negara</option>
+        </select>
+      </div>
+      <div class="md:col-span-2">
+        <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded hover:bg-indigo-700 transition">
+          🔐 Dapatkan Nomor
+        </button>
+      </div>
+    </form>
+  </section>
 
-    <!-- Active Orders Table -->
-    <section class="bg-white rounded-xl shadow-md p-6">
-      <h2 class="text-lg font-semibold mb-4">Riwayat Pemesanan Aktif</h2>
+  <!-- Active Orders -->
+  <section class="bg-white rounded-xl shadow-md p-6 mb-6">
+    <h2 class="text-lg font-semibold mb-4">Order Aktif</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full table-auto text-sm text-left">
+        <thead class="bg-gray-200">
+          <tr>
+            <th class="px-4 py-2">Nomor</th>
+            <th class="px-4 py-2">Layanan</th>
+            <th class="px-4 py-2">Negara</th>
+            <th class="px-4 py-2">Status</th>
+            <th class="px-4 py-2">Tanggal</th>
+            <th class="px-4 py-2">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="ordersTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- History -->
+  <section class="bg-white rounded-xl shadow-md p-6">
+    <div class="flex items-center justify-between cursor-pointer" onclick="toggleHistory()" id="toggleHistoryBtn">
+      <h2 class="text-lg font-semibold">Riwayat Order</h2>
+      <span id="historyIcon">🔽</span>
+    </div>
+    <div id="historySection" class="mt-4 hidden">
       <div class="overflow-x-auto">
         <table class="w-full table-auto text-sm text-left">
           <thead class="bg-gray-200">
@@ -50,150 +74,125 @@
               <th class="px-4 py-2">Layanan</th>
               <th class="px-4 py-2">Negara</th>
               <th class="px-4 py-2">Status</th>
-              <th class="px-4 py-2">Waktu</th>
-              <th class="px-4 py-2">Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="ordersTableBody"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- History Section -->
-    <section class="bg-white rounded-xl shadow-md p-6">
-      <h2 class="text-lg font-semibold mb-4 flex justify-between items-center">
-        Riwayat Selesai
-        <button id="toggleHistory" class="text-sm text-blue-600 hover:underline">Tampilkan</button>
-      </h2>
-      <div class="overflow-x-auto hidden" id="historySection">
-        <table class="w-full table-auto text-sm text-left">
-          <thead class="bg-gray-200">
-            <tr>
-              <th class="px-4 py-2">Nomor</th>
-              <th class="px-4 py-2">Layanan</th>
-              <th class="px-4 py-2">Negara</th>
-              <th class="px-4 py-2">Status</th>
-              <th class="px-4 py-2">Waktu</th>
+              <th class="px-4 py-2">Tanggal</th>
             </tr>
           </thead>
           <tbody id="historyTableBody"></tbody>
         </table>
       </div>
-    </section>
-  </div>
+    </div>
+  </section>
+</div>
 
-  <script>
-    async function fetchServices() {
-      const res = await fetch('/api/services');
-      const data = await res.json();
-      const select = document.getElementById('service');
-      Object.entries(data).forEach(([code, name]) => {
-        const opt = document.createElement('option');
-        opt.value = code;
-        opt.textContent = name;
-        select.appendChild(opt);
-      });
+<script>
+  async function fetchBalance() {
+    const res = await fetch('/api/balance');
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('balance').textContent = 'Saldo: $' + data.balance;
     }
+  }
 
-    async function fetchCountries() {
-      const res = await fetch('/api/countries');
-      const data = await res.json();
-      const select = document.getElementById('country');
-      Object.entries(data).forEach(([code, name]) => {
-        const opt = document.createElement('option');
-        opt.value = code;
-        opt.textContent = name;
-        select.appendChild(opt);
-      });
-    }
+  async function fetchServices() {
+    const res = await fetch('/api/services');
+    const data = await res.json();
+    const select = document.getElementById('service');
+    Object.entries(data).forEach(([code, name]) => {
+      const opt = document.createElement('option');
+      opt.value = code;
+      opt.textContent = name;
+      select.appendChild(opt);
+    });
+  }
 
-    async function fetchBalance() {
-      const res = await fetch('/api/balance');
-      const data = await res.json();
-      const balanceDiv = document.getElementById('balance');
-      if (data.success) {
-        balanceDiv.textContent = `Saldo Anda: $${parseFloat(data.balance).toFixed(2)}`;
-      } else {
-        balanceDiv.textContent = 'Gagal memuat saldo';
-      }
-    }
+  async function fetchCountries() {
+    const res = await fetch('/api/countries');
+    const data = await res.json();
+    const select = document.getElementById('country');
+    Object.entries(data).forEach(([code, name]) => {
+      const opt = document.createElement('option');
+      opt.value = code;
+      opt.textContent = name;
+      select.appendChild(opt);
+    });
+  }
 
-    async function loadOrders() {
-      const res = await fetch('/api/orders');
-      const { active_orders, history_orders } = await res.json();
+  async function loadOrders() {
+    const res = await fetch('/api/orders');
+    const data = await res.json();
+    const tbody = document.getElementById('ordersTableBody');
+    const historyTbody = document.getElementById('historyTableBody');
+    tbody.innerHTML = '';
+    historyTbody.innerHTML = '';
 
-      const activeTbody = document.getElementById('ordersTableBody');
-      const historyTbody = document.getElementById('historyTableBody');
-      activeTbody.innerHTML = '';
-      historyTbody.innerHTML = '';
-
-      active_orders.forEach(order => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td class="px-4 py-2">${order.number}</td>
-          <td class="px-4 py-2">${order.service}</td>
-          <td class="px-4 py-2">${order.country}</td>
-          <td class="px-4 py-2">
-            <span class="inline-block px-2 py-1 rounded text-white text-xs ${order.status === 'WAITING' ? 'bg-yellow-500' : order.status === 'COMPLETED' ? 'bg-green-600' : 'bg-gray-400'}">
-              ${order.status}
-            </span>
-          </td>
-          <td class="px-4 py-2">${new Date(order.created_at).toLocaleString()}</td>
-          <td class="px-4 py-2">
-            <button class="text-blue-600 hover:underline" onclick="getStatus('${order.id}')">Cek</button>
-            <button class="text-red-600 hover:underline ml-2" onclick="cancelOrder('${order.id}')">Cancel</button>
-          </td>
-        `;
-        activeTbody.appendChild(row);
-      });
-
-      history_orders.forEach(order => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td class="px-4 py-2">${order.number}</td>
-          <td class="px-4 py-2">${order.service}</td>
-          <td class="px-4 py-2">${order.country}</td>
-          <td class="px-4 py-2">${order.status}</td>
-          <td class="px-4 py-2">${new Date(order.created_at).toLocaleString()}</td>
-        `;
-        historyTbody.appendChild(row);
-      });
-    }
-
-    document.getElementById('orderForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const service = document.getElementById('service').value;
-      const country = document.getElementById('country').value;
-      await fetch('/api/create', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({service, country})
-      });
-      await loadOrders();
+    data.active_orders.forEach(order => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td class="px-4 py-2">${order.number}</td>
+        <td class="px-4 py-2">${order.service}</td>
+        <td class="px-4 py-2">${order.country}</td>
+        <td class="px-4 py-2">
+          <span class="inline-block px-2 py-1 rounded text-white text-xs ${order.status === 'WAITING' ? 'bg-yellow-500' : order.status === 'COMPLETED' ? 'bg-green-600' : 'bg-gray-400'}">
+            ${order.status}
+          </span>
+        </td>
+        <td class="px-4 py-2">${new Date(order.created_at).toLocaleString()}</td>
+        <td class="px-4 py-2">
+          <button class="text-blue-600 hover:underline" onclick="getStatus('${order.id}')">Cek</button>
+          <button class="text-red-600 hover:underline ml-2" onclick="cancelOrder('${order.id}')">Cancel</button>
+        </td>
+      `;
+      tbody.appendChild(row);
     });
 
-    function getStatus(id) {
-      fetch(`/api/status/${id}`)
-        .then(res => res.json())
-        .then(data => alert("Status: " + data.status + (data.sms ? `\nSMS: ${data.sms}` : "")));
-    }
-
-    function cancelOrder(id) {
-      fetch(`/api/cancel/${id}`, {method: 'POST'})
-        .then(() => loadOrders());
-    }
-
-    document.getElementById("toggleHistory").addEventListener("click", () => {
-      const section = document.getElementById("historySection");
-      section.classList.toggle("hidden");
+    data.history_orders.forEach(order => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td class="px-4 py-2">${order.number}</td>
+        <td class="px-4 py-2">${order.service}</td>
+        <td class="px-4 py-2">${order.country}</td>
+        <td class="px-4 py-2">${order.status}</td>
+        <td class="px-4 py-2">${new Date(order.created_at).toLocaleString()}</td>
+      `;
+      historyTbody.appendChild(row);
     });
+  }
 
-    // Init
-    fetchServices();
-    fetchCountries();
-    fetchBalance();
-    loadOrders();
-  </script>
+  function getStatus(id) {
+    fetch(`/api/status/${id}`)
+      .then(res => res.json())
+      .then(data => alert("Status: " + data.status + (data.sms ? `\nSMS: ${data.sms}` : "")));
+  }
+
+  function cancelOrder(id) {
+    fetch(`/api/cancel/${id}`, {method: 'POST'}).then(() => loadOrders());
+  }
+
+  document.getElementById('orderForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const service = document.getElementById('service').value;
+    const country = document.getElementById('country').value;
+    fetch('/api/create', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({service, country})
+    })
+    .then(res => res.json())
+    .then(() => loadOrders());
+  });
+
+  function toggleHistory() {
+    const section = document.getElementById('historySection');
+    const icon = document.getElementById('historyIcon');
+    section.classList.toggle('hidden');
+    icon.textContent = section.classList.contains('hidden') ? '🔽' : '🔼';
+  }
+
+  fetchBalance();
+  fetchServices();
+  fetchCountries();
+  loadOrders();
+</script>
 
 </body>
 </html>
