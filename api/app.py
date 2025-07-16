@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify
-from .supabase_client import (
+from supabase_client import (
     insert_order,
     get_all_orders,
     get_order_by_id,
@@ -8,7 +8,7 @@ from .supabase_client import (
 )
 import requests
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 app = Flask(__name__, template_folder="../templates", static_folder="../static")
 
@@ -41,32 +41,31 @@ def get_smshub_data(action, params=None):
         print(f"API Error: {str(e)}")
         return None
 
-def format_order_display(order):
-    service_name = SERVICES.get(order['service'], order['service'])
-    country_name = COUNTRIES.get(order['country'], order['country'])
-    order['service'] = service_name
-    order['country'] = country_name
-    return order
-
 @app.route("/")
 def index():
     orders = get_all_orders()
+    now = datetime.now(timezone.utc)
     active_orders = []
     history_orders = []
-    now = datetime.utcnow()
+
     for order in orders:
-        created_time = datetime.fromisoformat(order['created_at'])
+        try:
+            created_time = datetime.fromisoformat(order['created_at'])
+            if created_time.tzinfo is None:
+                created_time = created_time.replace(tzinfo=timezone.utc)
+        except:
+            created_time = now
+
         if order['status'] == 'WAITING' and (now - created_time) < timedelta(minutes=20):
-            active_orders.append(format_order_display(order))
+            active_orders.append(order)
         else:
-            history_orders.append(format_order_display(order))
-    return render_template("index.html", orders=active_orders, history=history_orders)
+            history_orders.append(order)
+
+    return render_template("index.html", active_orders=active_orders, history_orders=history_orders)
 
 @app.route("/order", methods=["POST"])
 def create_order():
     data = request.json
-    data['created_at'] = datetime.utcnow().isoformat()
-    data['status'] = 'WAITING'
     response = insert_order(data)
     return jsonify(response)
 
@@ -122,6 +121,74 @@ def get_balance():
     if response and response.startswith('ACCESS_BALANCE:'):
         return jsonify({'success': True, 'balance': response.split(':')[1]})
     return jsonify({'success': False, 'error': 'Failed to get balance'})
+
+@app.route("/api/orders")
+def api_orders():
+    orders = get_all_orders()
+    now = datetime.now(timezone.utc)
+    active_orders = []
+    history_orders = []
+
+    for order in orders:
+        try:
+            created_time = datetime.fromisoformat(order['created_at'])
+            if created_time.tzinfo is None:
+                created_time = created_time.replace(tzinfo=timezone.utc)
+        except:
+            created_time = now
+
+        if order['status'] == 'WAITING' and (now - created_time) < timedelta(minutes=20):
+            active_orders.append(order)
+        else:
+            history_orders.append(order)
+
+    return jsonify({
+        'active_orders': active_orders,
+        'history_orders': history_orders
+    })
+
+@app.route("/api/create", methods=["POST"])
+def create_sms_order():
+    data = request.json
+    service = data.get('service')
+    country = data.get('country')
+    if not service or not country:
+        return jsonify({'success': False, 'error': 'Service and country are required'})
+
+    response = get_smshub_data('getNumber', {'service': service, 'country': country})
+    if response and response.startswith('ACCESS_NUMBER:'):
+        _, order_id, number = response.split(':')
+        order = {
+            'id': order_id,
+            'number': number,
+            'service': SERVICES.get(service, service),
+            'country': COUNTRIES.get(country, country),
+            'status': 'WAITING',
+            'created_at': datetime.now(timezone.utc).isoformat()
+        }
+        insert_order(order)
+        return jsonify({'success': True, 'order': order})
+    return jsonify({'success': False, 'error': response or 'Failed to create order'})
+
+@app.route("/api/status/<order_id>")
+def get_status(order_id):
+    response = get_smshub_data('getStatus', {'id': order_id})
+    if response:
+        if response.startswith('STATUS_OK:'):
+            return jsonify({
+                'status': 'COMPLETED',
+                'sms': response.split(':', 1)[1]
+            })
+        return jsonify({'status': response})
+    return jsonify({'status': 'UNKNOWN'})
+
+@app.route("/api/cancel/<order_id>", methods=['POST'])
+def cancel_order(order_id):
+    response = get_smshub_data('setStatus', {'status': 8, 'id': order_id})
+    if response == 'ACCESS_CANCEL':
+        update_order(order_id, {'status': 'CANCELED'})
+        return jsonify({'success': True})
+    return jsonify({'success': False})
 
 if __name__ == "__main__":
     app.run(debug=True)
