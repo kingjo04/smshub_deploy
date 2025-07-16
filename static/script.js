@@ -2,45 +2,6 @@
 document.getElementById('createOrderBtn').addEventListener('click', createOrder);
 document.getElementById('refreshBtn').addEventListener('click', updateStatuses);
 
-// Fungsi inisialisasi dropdown
-async function populateDropdowns() {
-    try {
-        const [servicesResponse, countriesResponse] = await Promise.all([
-            fetch('/api/all_services'),
-            fetch('/api/all_countries')
-        ]);
-        const services = await servicesResponse.json();
-        const countries = await countriesResponse.json();
-        console.log('Services:', services);
-        console.log('Countries:', countries);
-
-        const serviceSelect = document.getElementById('serviceSelect');
-        const countrySelect = document.getElementById('countrySelect');
-        serviceSelect.innerHTML = '<option value="">Pilih layanan</option>';
-        countrySelect.innerHTML = '<option value="">Pilih negara</option>';
-
-        if (services.success) {
-            services.services.forEach(service => {
-                const option = document.createElement('option');
-                option.value = service;
-                option.textContent = SERVICES[service] || service;
-                serviceSelect.appendChild(option);
-            });
-        }
-        if (countries.success) {
-            countries.countries.forEach(country => {
-                const option = document.createElement('option');
-                option.value = country;
-                option.textContent = COUNTRIES[country] || country;
-                countrySelect.appendChild(option);
-            });
-        }
-    } catch (error) {
-        console.error('Error loading dropdowns:', error);
-        showNotification(`❌ Error memuat dropdown: ${error}`, 'error');
-    }
-}
-
 // Fungsi utama
 async function createOrder() {
     try {
@@ -169,6 +130,5 @@ function startAutoRefresh() {
 }
 
 // Initialize
-populateDropdowns();
 fetchOrders();
 startAutoRefresh();
