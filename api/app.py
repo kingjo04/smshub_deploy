@@ -1,11 +1,12 @@
 from flask import Flask, render_template, request, jsonify
-from supabase_client import (
+from .supabase_client import (
     insert_order,
     get_all_orders,
     get_order_by_id,
     update_order,
     delete_order
 )
+
 
 app = Flask(__name__, template_folder="../templates", static_folder="../static")
 
