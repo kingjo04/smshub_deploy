@@ -11,9 +11,13 @@ async function populateDropdowns() {
         ]);
         const services = await servicesResponse.json();
         const countries = await countriesResponse.json();
+        console.log('Services:', services);
+        console.log('Countries:', countries);
 
         const serviceSelect = document.getElementById('serviceSelect');
         const countrySelect = document.getElementById('countrySelect');
+        serviceSelect.innerHTML = '<option value="">Pilih layanan</option>';
+        countrySelect.innerHTML = '<option value="">Pilih negara</option>';
 
         if (services.success) {
             services.services.forEach(service => {
@@ -32,6 +36,7 @@ async function populateDropdowns() {
             });
         }
     } catch (error) {
+        console.error('Error loading dropdowns:', error);
         showNotification(`❌ Error memuat dropdown: ${error}`, 'error');
     }
 }
