@@ -200,7 +200,7 @@ def cancel_order(order_id):
     if response == 'ACCESS_CANCEL':
         update_order(order_id, {'status': 'CANCELED'})
         return jsonify({'success': True})
-    return jsonify({'success': False'})
+    return jsonify({'success': False})
 
 if __name__ == "__main__":
     app.run(debug=True)
