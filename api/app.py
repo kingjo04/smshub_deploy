@@ -1,20 +1,15 @@
 from flask import Flask, jsonify, render_template, request
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 
-# Tentukan path absolut ke folder templates dan static
-TEMPLATE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../templates'))
-STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../static'))
+from supabase_client import insert_order, get_all_orders, update_order, delete_order
 
-app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
+app = Flask(__name__)
 
-# Ambil API_KEY dari environment variable
 API_KEY = os.getenv("API_KEY")
 BASE_URL = 'https://smshub.org/stubs/handler_api.php'
-ORDERS_FILE = 'orders.txt'
 
-# Daftar layanan dan negara yang didukung
 SERVICES = {
     "go": "Google",
     "ni": "Gojek",
@@ -41,45 +36,6 @@ def get_smshub_data(action, params=None):
         print(f"API Error: {str(e)}")
         return None
 
-def save_order_to_file(order):
-    with open(ORDERS_FILE, 'a') as file:
-        file.write(f"{order['id']},{order['number']},{order['service']},{order['country']},{order['status']},{order['created_at']}\n")
-
-def load_orders_from_file():
-    if not os.path.exists(ORDERS_FILE):
-        return []
-    orders = []
-    with open(ORDERS_FILE, 'r') as file:
-        for line in file:
-            order_id, number, service, country, status, created_at = line.strip().split(',')
-            orders.append({
-                'id': order_id,
-                'number': number,
-                'service': service,
-                'country': country,
-                'status': status,
-                'created_at': created_at
-            })
-    return orders
-
-def update_order_in_file(order_id, updates):
-    orders = load_orders_from_file()
-    updated_orders = []
-    for order in orders:
-        if order['id'] == order_id:
-            order.update(updates)
-        updated_orders.append(order)
-    with open(ORDERS_FILE, 'w') as file:
-        for order in updated_orders:
-            file.write(f"{order['id']},{order['number']},{order['service']},{order['country']},{order['status']},{order['created_at']}\n")
-
-def remove_order_from_file(order_id):
-    orders = load_orders_from_file()
-    updated_orders = [order for order in orders if order['id'] != order_id]
-    with open(ORDERS_FILE, 'w') as file:
-        for order in updated_orders:
-            file.write(f"{order['id']},{order['number']},{order['service']},{order['country']},{order['status']},{order['created_at']}\n")
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -101,30 +57,41 @@ def get_balance():
 
 @app.route('/api/orders')
 def get_orders():
-    orders = load_orders_from_file()
-    return jsonify({'success': True, 'orders': orders})
+    orders = get_all_orders()
+    result = []
+    for o in orders:
+        expires_at = datetime.fromisoformat(o['expires_at']) if o.get('expires_at') else None
+        remaining = (expires_at - datetime.utcnow()).total_seconds() if expires_at else None
+        result.append({
+            **o,
+            'service': SERVICES.get(o['service'], o['service']),
+            'country': COUNTRIES.get(o['country'], o['country']),
+            'expires_in': max(int(remaining), 0) if remaining else None
+        })
+    return jsonify({'success': True, 'orders': result})
 
 @app.route('/api/create', methods=['POST'])
 def create_order():
     data = request.json
     service = data.get('service')
     country = data.get('country')
-    if service not in SERVICES:
-        return jsonify({'success': False, 'error': 'Invalid service'})
-    if country not in COUNTRIES:
-        return jsonify({'success': False, 'error': 'Invalid country'})
+    if service not in SERVICES or country not in COUNTRIES:
+        return jsonify({'success': False, 'error': 'Invalid service or country'})
+
     response = get_smshub_data('getNumber', {'service': service, 'country': country})
     if response and response.startswith('ACCESS_NUMBER:'):
         _, order_id, number = response.split(':')
+        now = datetime.utcnow()
         order = {
             'id': order_id,
             'number': number,
             'service': service,
             'country': country,
             'status': 'WAITING',
-            'created_at': datetime.now().isoformat()
+            'created_at': now.isoformat(),
+            'expires_at': (now + timedelta(minutes=20)).isoformat()
         }
-        save_order_to_file(order)
+        insert_order(order)
         return jsonify({'success': True, 'order': order})
     return jsonify({'success': False, 'error': response or 'Failed to create order'})
 
@@ -133,10 +100,13 @@ def get_status(order_id):
     response = get_smshub_data('getStatus', {'id': order_id})
     if response:
         if response.startswith('STATUS_OK:'):
-            return jsonify({
-                'status': 'COMPLETED',
-                'sms': response.split(':', 1)[1]
-            })
+            update_order(order_id, {'status': 'COMPLETED'})
+            return jsonify({'status': 'COMPLETED', 'sms': response.split(':', 1)[1]})
+        elif response.startswith('STATUS_WAIT_CODE'):
+            return jsonify({'status': 'WAITING'})
+        elif response.startswith('STATUS_CANCEL'):
+            update_order(order_id, {'status': 'CANCELED'})
+            return jsonify({'status': 'CANCELED'})
         return jsonify({'status': response})
     return jsonify({'status': 'UNKNOWN'})
 
@@ -144,7 +114,7 @@ def get_status(order_id):
 def cancel_order(order_id):
     response = get_smshub_data('setStatus', {'status': 8, 'id': order_id})
     if response == 'ACCESS_CANCEL':
-        remove_order_from_file(order_id)
+        delete_order(order_id)
         return jsonify({'success': True})
     return jsonify({'success': False})
 
@@ -152,9 +122,11 @@ def cancel_order(order_id):
 def request_again(order_id):
     response = get_smshub_data('setStatus', {'status': 3, 'id': order_id})
     if response == 'ACCESS_READY':
-        update_order_in_file(order_id, {
+        now = datetime.utcnow()
+        update_order(order_id, {
             'status': 'WAITING',
-            'created_at': datetime.now().isoformat()
+            'created_at': now.isoformat(),
+            'expires_at': (now + timedelta(minutes=20)).isoformat()
         })
         return jsonify({'success': True})
     return jsonify({'success': False, 'error': response})
@@ -162,7 +134,7 @@ def request_again(order_id):
 @app.route('/api/remove_order/<order_id>', methods=['POST'])
 def remove_order(order_id):
     try:
-        remove_order_from_file(order_id)
+        delete_order(order_id)
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
