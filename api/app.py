@@ -3,7 +3,11 @@ import requests
 from datetime import datetime
 import os
 
-app = Flask(__name__)
+# Tentukan path absolut ke folder templates dan static
+TEMPLATE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../templates'))
+STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../static'))
+
+app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
 
 # Ambil API_KEY dari environment variable
 API_KEY = os.getenv("API_KEY")
