@@ -1,8 +1,10 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from flask import Flask, jsonify, render_template, request
 import requests
 from datetime import datetime, timedelta
-import os
-
 from supabase_client import insert_order, get_all_orders, update_order, delete_order
 
 app = Flask(__name__)
