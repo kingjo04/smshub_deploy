@@ -1,14 +1,12 @@
 from flask import Flask, jsonify, render_template, request
 import requests
-import configparser
-import ast
 from datetime import datetime
 import os
 
 app = Flask(__name__)
-config = configparser.ConfigParser()
-config.read('config.ini')
-API_KEY = config['DEFAULT']['API_KEY']
+
+# Ambil API_KEY dari environment variable
+API_KEY = os.getenv("API_KEY")
 BASE_URL = 'https://smshub.org/stubs/handler_api.php'
 ORDERS_FILE = 'orders.txt'
 
@@ -40,15 +38,12 @@ def get_smshub_data(action, params=None):
         return None
 
 def save_order_to_file(order):
-    """Simpan order ke file orders.txt"""
     with open(ORDERS_FILE, 'a') as file:
         file.write(f"{order['id']},{order['number']},{order['service']},{order['country']},{order['status']},{order['created_at']}\n")
 
 def load_orders_from_file():
-    """Baca semua order dari file orders.txt"""
     if not os.path.exists(ORDERS_FILE):
         return []
-    
     orders = []
     with open(ORDERS_FILE, 'r') as file:
         for line in file:
@@ -64,23 +59,19 @@ def load_orders_from_file():
     return orders
 
 def update_order_in_file(order_id, updates):
-    """Update order di file orders.txt"""
     orders = load_orders_from_file()
     updated_orders = []
     for order in orders:
         if order['id'] == order_id:
             order.update(updates)
         updated_orders.append(order)
-    
     with open(ORDERS_FILE, 'w') as file:
         for order in updated_orders:
             file.write(f"{order['id']},{order['number']},{order['service']},{order['country']},{order['status']},{order['created_at']}\n")
 
 def remove_order_from_file(order_id):
-    """Hapus order dari file orders.txt"""
     orders = load_orders_from_file()
     updated_orders = [order for order in orders if order['id'] != order_id]
-    
     with open(ORDERS_FILE, 'w') as file:
         for order in updated_orders:
             file.write(f"{order['id']},{order['number']},{order['service']},{order['country']},{order['status']},{order['created_at']}\n")
@@ -114,15 +105,11 @@ def create_order():
     data = request.json
     service = data.get('service')
     country = data.get('country')
-    
     if service not in SERVICES:
         return jsonify({'success': False, 'error': 'Invalid service'})
-    
     if country not in COUNTRIES:
         return jsonify({'success': False, 'error': 'Invalid country'})
-    
     response = get_smshub_data('getNumber', {'service': service, 'country': country})
-    
     if response and response.startswith('ACCESS_NUMBER:'):
         _, order_id, number = response.split(':')
         order = {
@@ -133,9 +120,8 @@ def create_order():
             'status': 'WAITING',
             'created_at': datetime.now().isoformat()
         }
-        save_order_to_file(order)  # Simpan order ke
+        save_order_to_file(order)
         return jsonify({'success': True, 'order': order})
-    
     return jsonify({'success': False, 'error': response or 'Failed to create order'})
 
 @app.route('/api/status/<order_id>')
@@ -154,19 +140,17 @@ def get_status(order_id):
 def cancel_order(order_id):
     response = get_smshub_data('setStatus', {'status': 8, 'id': order_id})
     if response == 'ACCESS_CANCEL':
-        remove_order_from_file(order_id)  # Hapus order dari file
+        remove_order_from_file(order_id)
         return jsonify({'success': True})
     return jsonify({'success': False})
 
-# ... (Kode backend sebelumnya tetap sama)
 @app.route('/api/request_again/<order_id>', methods=['POST'])
 def request_again(order_id):
-    """Fitur untuk meminta ulang SMS"""
     response = get_smshub_data('setStatus', {'status': 3, 'id': order_id})
     if response == 'ACCESS_READY':
         update_order_in_file(order_id, {
             'status': 'WAITING',
-            'created_at': datetime.now().isoformat()  # Reset waktu
+            'created_at': datetime.now().isoformat()
         })
         return jsonify({'success': True})
     return jsonify({'success': False, 'error': response})
@@ -174,7 +158,7 @@ def request_again(order_id):
 @app.route('/api/remove_order/<order_id>', methods=['POST'])
 def remove_order(order_id):
     try:
-        remove_order_from_file(order_id)  # Fungsi yang sudah ada
+        remove_order_from_file(order_id)
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
