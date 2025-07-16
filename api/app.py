@@ -1,29 +1,25 @@
 import os
-import sys
 from flask import Flask, jsonify, render_template, request
 from datetime import datetime
 import requests
+import sys
 
-# Agar bisa import supabase_client.py dari folder yang sama
+# Tambahkan path untuk import file supabase_client.py
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
 from supabase_client import (
     insert_order, get_all_orders, update_order,
     delete_order, get_order_by_id
 )
 
-# Setup Flask app
 app = Flask(
     __name__,
     template_folder='../templates',
     static_folder='../static'
 )
 
-# API key dan endpoint SMSHub
 API_KEY = os.environ.get('API_KEY')
 BASE_URL = 'https://smshub.org/stubs/handler_api.php'
 
-# Layanan dan negara
 SERVICES = {
     "go": "Google",
     "ni": "Gojek",
@@ -39,7 +35,6 @@ COUNTRIES = {
     "3": "China"
 }
 
-# Fungsi helper untuk panggil API smshub
 def get_smshub_data(action, params=None):
     try:
         params = params or {}
@@ -48,10 +43,8 @@ def get_smshub_data(action, params=None):
         response.raise_for_status()
         return response.text
     except Exception as e:
-        print(f"[SMSHub ERROR] {e}")
+        print(f"API Error: {str(e)}")
         return None
-
-# Routing
 
 @app.route('/')
 def index():
@@ -69,8 +62,7 @@ def get_countries():
 def get_balance():
     response = get_smshub_data('getBalance')
     if response and response.startswith('ACCESS_BALANCE:'):
-        balance = response.split(':')[1]
-        return jsonify({'success': True, 'balance': balance})
+        return jsonify({'success': True, 'balance': response.split(':')[1]})
     return jsonify({'success': False, 'error': 'Failed to get balance'})
 
 @app.route('/api/orders')
@@ -93,10 +85,7 @@ def create_order():
     if country not in COUNTRIES:
         return jsonify({'success': False, 'error': 'Invalid country'})
 
-    response = get_smshub_data('getNumber', {
-        'service': service,
-        'country': country
-    })
+    response = get_smshub_data('getNumber', {'service': service, 'country': country})
 
     if response and response.startswith('ACCESS_NUMBER:'):
         _, order_id, number = response.split(':')
@@ -129,8 +118,6 @@ def get_status(order_id):
         elif response.startswith('STATUS_USED'):
             update_order(order_id, {'status': 'USED'})
             return jsonify({'status': 'USED'})
-        else:
-            return jsonify({'status': response})
     return jsonify({'status': 'UNKNOWN'})
 
 @app.route('/api/cancel/<order_id>', methods=['POST'])
@@ -160,6 +147,5 @@ def remove_order(order_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
-# Untuk dev lokal
 if __name__ == '__main__':
     app.run(debug=True)
