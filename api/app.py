@@ -1,23 +1,18 @@
-import os
 from flask import Flask, jsonify, render_template, request
+from supabase_client import (
+    insert_order,
+    get_all_orders,
+    update_order,
+    delete_order,
+    get_order_by_id
+)
 from datetime import datetime
 import requests
-import sys
+import os
 
-# Tambahkan path untuk import file supabase_client.py
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from supabase_client import (
-    insert_order, get_all_orders, update_order,
-    delete_order, get_order_by_id
-)
+app = Flask(__name__)
 
-app = Flask(
-    __name__,
-    template_folder='../templates',
-    static_folder='../static'
-)
-
-API_KEY = os.environ.get('API_KEY')
+API_KEY = os.getenv("API_KEY")
 BASE_URL = 'https://smshub.org/stubs/handler_api.php'
 
 SERVICES = {
@@ -67,11 +62,14 @@ def get_balance():
 
 @app.route('/api/orders')
 def get_orders():
-    orders = get_all_orders()
-    for order in orders:
-        order["service"] = SERVICES.get(order["service"], order["service"])
-        order["country"] = COUNTRIES.get(order["country"], order["country"])
-    return jsonify({'success': True, 'orders': orders})
+    try:
+        orders = get_all_orders()
+        for o in orders:
+            o['service'] = SERVICES.get(o['service'], o['service'])
+            o['country'] = COUNTRIES.get(o['country'], o['country'])
+        return jsonify({'success': True, 'orders': orders})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/create', methods=['POST'])
 def create_order():
@@ -81,7 +79,6 @@ def create_order():
 
     if service not in SERVICES:
         return jsonify({'success': False, 'error': 'Invalid service'})
-
     if country not in COUNTRIES:
         return jsonify({'success': False, 'error': 'Invalid country'})
 
@@ -107,17 +104,9 @@ def get_status(order_id):
     response = get_smshub_data('getStatus', {'id': order_id})
     if response:
         if response.startswith('STATUS_OK:'):
-            sms = response.split(':', 1)[1]
             update_order(order_id, {'status': 'COMPLETED'})
-            return jsonify({'status': 'COMPLETED', 'sms': sms})
-        elif response.startswith('STATUS_WAIT_CODE'):
-            return jsonify({'status': 'WAITING'})
-        elif response.startswith('STATUS_CANCEL'):
-            update_order(order_id, {'status': 'CANCELED'})
-            return jsonify({'status': 'CANCELED'})
-        elif response.startswith('STATUS_USED'):
-            update_order(order_id, {'status': 'USED'})
-            return jsonify({'status': 'USED'})
+            return jsonify({'status': 'COMPLETED', 'sms': response.split(':', 1)[1]})
+        return jsonify({'status': response})
     return jsonify({'status': 'UNKNOWN'})
 
 @app.route('/api/cancel/<order_id>', methods=['POST'])
@@ -126,7 +115,7 @@ def cancel_order(order_id):
     if response == 'ACCESS_CANCEL':
         delete_order(order_id)
         return jsonify({'success': True})
-    return jsonify({'success': False, 'error': response})
+    return jsonify({'success': False})
 
 @app.route('/api/request_again/<order_id>', methods=['POST'])
 def request_again(order_id):
