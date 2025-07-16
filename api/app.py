@@ -12,10 +12,11 @@ from datetime import datetime
 
 app = Flask(__name__, template_folder="../templates", static_folder="../static")
 
+# Konstanta API
 API_KEY = os.getenv("API_KEY")
 BASE_URL = 'https://smshub.org/stubs/handler_api.php'
 
-# Favorite layanan dan negara
+# Layanan & Negara favorit
 SERVICES = {
     "go": "Google",
     "ni": "Gojek",
@@ -54,53 +55,23 @@ def get_services():
 def get_countries():
     return jsonify(COUNTRIES)
 
-@app.route("/api/all_services")
-def get_all_services():
-    response = get_smshub_data('getServices')
-    if not response:
-        return jsonify({'success': False, 'error': 'Failed to load services'})
-    try:
-        services = eval(response)
-        return jsonify({'success': True, 'services': services})
-    except:
-        return jsonify({'success': False, 'error': 'Failed to parse services'})
-
-@app.route("/api/all_countries")
-def get_all_countries():
-    response = get_smshub_data('getCountries')
-    if not response:
-        return jsonify({'success': False, 'error': 'Failed to load countries'})
-    try:
-        countries = eval(response)
-        return jsonify({'success': True, 'countries': countries})
-    except:
-        return jsonify({'success': False, 'error': 'Failed to parse countries'})
-
-@app.route("/api/balance")
-def get_balance():
-    response = get_smshub_data('getBalance')
-    if response and response.startswith('ACCESS_BALANCE:'):
-        return jsonify({'success': True, 'balance': response.split(':')[1]})
-    return jsonify({'success': False, 'error': 'Failed to get balance'})
-
 @app.route("/api/orders")
-def get_orders():
+def api_orders():
     orders = get_all_orders()
-    return jsonify({'success': True, 'orders': orders})
+    return jsonify({'orders': orders})
 
 @app.route("/api/create", methods=["POST"])
 def create_order():
     data = request.json
     service = data.get('service')
     country = data.get('country')
-    if service not in SERVICES:
-        return jsonify({'success': False, 'error': 'Invalid service'})
-    if country not in COUNTRIES:
-        return jsonify({'success': False, 'error': 'Invalid country'})
+    if not service or not country:
+        return jsonify({'success': False, 'error': 'Service or country is missing'})
+
     response = get_smshub_data('getNumber', {'service': service, 'country': country})
     if response and response.startswith('ACCESS_NUMBER:'):
-        _, order_id, number = response.split(':')
-        order = {
+        _, order_id, number = response.strip().split(':')
+        order_data = {
             'id': order_id,
             'number': number,
             'service': service,
@@ -108,8 +79,8 @@ def create_order():
             'status': 'WAITING',
             'created_at': datetime.now().isoformat()
         }
-        insert_order(order)
-        return jsonify({'success': True, 'order': order})
+        insert_order(order_data)
+        return jsonify({'success': True, 'order': order_data})
     return jsonify({'success': False, 'error': response or 'Failed to create order'})
 
 @app.route("/api/status/<order_id>")
@@ -117,10 +88,7 @@ def get_status(order_id):
     response = get_smshub_data('getStatus', {'id': order_id})
     if response:
         if response.startswith('STATUS_OK:'):
-            return jsonify({
-                'status': 'COMPLETED',
-                'sms': response.split(':', 1)[1]
-            })
+            return jsonify({'status': 'COMPLETED', 'sms': response.split(':', 1)[1]})
         return jsonify({'status': response})
     return jsonify({'status': 'UNKNOWN'})
 
@@ -132,5 +100,9 @@ def cancel_order(order_id):
         return jsonify({'success': True})
     return jsonify({'success': False})
 
-if __name__ == "__main__":
-    app.run(debug=True)
+@app.route("/api/balance")
+def get_balance():
+    response = get_smshub_data('getBalance')
+    if response and response.startswith('ACCESS_BALANCE:'):
+        return jsonify({'success': True, 'balance': response.split(':')[1]})
+    return jsonify({'success': False, 'error': 'Failed to get balance'})
