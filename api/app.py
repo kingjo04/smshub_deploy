@@ -53,8 +53,10 @@ def index():
             created_time = datetime.fromisoformat(order['created_at'])
             if created_time.tzinfo is None:
                 created_time = created_time.replace(tzinfo=timezone.utc)
+            expires_time = datetime.fromisoformat(order['expires_at']) if order['expires_at'] else created_time + timedelta(minutes=20)
         except:
             created_time = now
+            expires_time = now + timedelta(minutes=20)
 
         if order['status'] == 'WAITING' and (now - created_time) < timedelta(minutes=20):
             active_orders.append(order)
@@ -66,6 +68,8 @@ def index():
 @app.route("/order", methods=["POST"])
 def create_order():
     data = request.json
+    if not data.get('expires_at'):
+        data['expires_at'] = (datetime.now(timezone.utc) + timedelta(minutes=20)).isoformat()
     response = insert_order(data)
     return jsonify(response)
 
@@ -77,6 +81,8 @@ def get_order(order_id):
 @app.route("/order/<order_id>", methods=["PUT"])
 def update(order_id):
     data = request.json
+    if 'sms_code' in data and not data.get('expires_at'):
+        data['expires_at'] = (datetime.now(timezone.utc) + timedelta(minutes=20)).isoformat()
     result = update_order(order_id, data)
     return jsonify(result)
 
@@ -134,8 +140,10 @@ def api_orders():
             created_time = datetime.fromisoformat(order['created_at'])
             if created_time.tzinfo is None:
                 created_time = created_time.replace(tzinfo=timezone.utc)
+            expires_time = datetime.fromisoformat(order['expires_at']) if order['expires_at'] else created_time + timedelta(minutes=20)
         except:
             created_time = now
+            expires_time = now + timedelta(minutes=20)
 
         if order['status'] == 'WAITING' and (now - created_time) < timedelta(minutes=20):
             active_orders.append(order)
@@ -164,7 +172,9 @@ def create_sms_order():
             'service': SERVICES.get(service, service),
             'country': COUNTRIES.get(country, country),
             'status': 'WAITING',
-            'created_at': datetime.now(timezone.utc).isoformat()
+            'created_at': datetime.now(timezone.utc).isoformat(),
+            'expires_at': (datetime.now(timezone.utc) + timedelta(minutes=20)).isoformat(),
+            'sms_code': None
         }
         insert_order(order)
         return jsonify({'success': True, 'order': order})
@@ -175,9 +185,11 @@ def get_status(order_id):
     response = get_smshub_data('getStatus', {'id': order_id})
     if response:
         if response.startswith('STATUS_OK:'):
+            sms_code = response.split(':', 1)[1]
+            update_order(order_id, {'status': 'COMPLETED', 'sms_code': sms_code})
             return jsonify({
                 'status': 'COMPLETED',
-                'sms': response.split(':', 1)[1]
+                'sms_code': sms_code
             })
         return jsonify({'status': response})
     return jsonify({'status': 'UNKNOWN'})
@@ -188,7 +200,7 @@ def cancel_order(order_id):
     if response == 'ACCESS_CANCEL':
         update_order(order_id, {'status': 'CANCELED'})
         return jsonify({'success': True})
-    return jsonify({'success': False})
+    return jsonify({'success': False'})
 
 if __name__ == "__main__":
     app.run(debug=True)
