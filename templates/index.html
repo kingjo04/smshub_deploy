@@ -4,142 +4,164 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SMSHub Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
 </head>
-<body class="bg-gray-100 text-gray-900">
+<body class="bg-light">
+  <div class="container py-4">
+    <h1 class="mb-4">SMSHub Dashboard</h1>
 
-  <div class="max-w-6xl mx-auto p-6">
-    <!-- Header -->
-    <header class="text-center mb-8">
-      <h1 class="text-3xl font-bold text-indigo-600">📱 SMSHub Dashboard</h1>
-      <p class="text-sm text-gray-600">Beli & kelola nomor SMS dengan mudah</p>
-    </header>
+    <!-- Balance -->
+    <div class="mb-3">
+      <button class="btn btn-primary" onclick="fetchBalance()">Check Balance</button>
+      <span id="balance" class="ms-3 fw-bold"></span>
+    </div>
 
     <!-- Form -->
-    <section class="bg-white rounded-xl shadow-md p-6 mb-8">
-      <form id="orderForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Layanan</label>
-          <select id="service" class="w-full mt-1 p-2 border rounded">
-            <option value="">Pilih layanan</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Negara</label>
-          <select id="country" class="w-full mt-1 p-2 border rounded">
-            <option value="">Pilih negara</option>
-          </select>
-        </div>
-        <div class="md:col-span-2">
-          <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded hover:bg-indigo-700 transition">
-            🔐 Dapatkan Nomor
-          </button>
-        </div>
-      </form>
-    </section>
-
-    <!-- Orders Table -->
-    <section class="bg-white rounded-xl shadow-md p-6">
-      <h2 class="text-lg font-semibold mb-4">Riwayat Pemesanan</h2>
-      <div class="overflow-x-auto">
-        <table class="w-full table-auto text-sm text-left">
-          <thead class="bg-gray-200">
-            <tr>
-              <th class="px-4 py-2">Nomor</th>
-              <th class="px-4 py-2">Layanan</th>
-              <th class="px-4 py-2">Negara</th>
-              <th class="px-4 py-2">Status</th>
-              <th class="px-4 py-2">Tanggal</th>
-              <th class="px-4 py-2">Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="ordersTableBody">
-            <!-- Data diisi dari JS -->
-          </tbody>
-        </table>
+    <div class="card mb-4">
+      <div class="card-body">
+        <h5 class="card-title">Create Order</h5>
+        <form id="orderForm">
+          <div class="mb-3">
+            <label for="service" class="form-label">Favorite Services</label>
+            <select id="service" class="form-select" required></select>
+          </div>
+          <div class="mb-3">
+            <label for="country" class="form-label">Favorite Countries</label>
+            <select id="country" class="form-select" required></select>
+          </div>
+          <div class="mb-3">
+            <label for="all_service" class="form-label">All Services</label>
+            <select id="all_service" class="form-select"></select>
+          </div>
+          <div class="mb-3">
+            <label for="all_country" class="form-label">All Countries</label>
+            <select id="all_country" class="form-select"></select>
+          </div>
+          <button type="submit" class="btn btn-success">Create</button>
+        </form>
       </div>
-    </section>
+    </div>
+
+    <!-- Order List -->
+    <h4>Orders</h4>
+    <table class="table table-bordered" id="ordersTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Number</th>
+          <th>Service</th>
+          <th>Country</th>
+          <th>Status</th>
+          <th>Created At</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
   <script>
-    // Fetch daftar layanan
-    fetch('/api/services').then(res => res.json()).then(data => {
-      const select = document.getElementById('service');
-      Object.entries(data).forEach(([code, name]) => {
-        const opt = document.createElement('option');
-        opt.value = code;
-        opt.textContent = name;
-        select.appendChild(opt);
-      });
-    });
-
-    // Fetch daftar negara
-    fetch('/api/countries').then(res => res.json()).then(data => {
-      const select = document.getElementById('country');
-      Object.entries(data).forEach(([code, name]) => {
-        const opt = document.createElement('option');
-        opt.value = code;
-        opt.textContent = name;
-        select.appendChild(opt);
-      });
-    });
-
-    // Fetch orders dan tampilkan
-    function loadOrders() {
-      fetch('/api/orders')
-        .then(res => res.json())
-        .then(data => {
-          const tbody = document.getElementById('ordersTableBody');
-          tbody.innerHTML = '';
-          data.orders.forEach(order => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-              <td class="px-4 py-2">${order.number}</td>
-              <td class="px-4 py-2">${order.service}</td>
-              <td class="px-4 py-2">${order.country}</td>
-              <td class="px-4 py-2">
-                <span class="inline-block px-2 py-1 rounded text-white text-xs ${order.status === 'WAITING' ? 'bg-yellow-500' : order.status === 'COMPLETED' ? 'bg-green-600' : 'bg-gray-400'}">
-                  ${order.status}
-                </span>
-              </td>
-              <td class="px-4 py-2">${new Date(order.created_at).toLocaleString()}</td>
-              <td class="px-4 py-2">
-                <button class="text-blue-600 hover:underline" onclick="getStatus('${order.id}')">Cek</button>
-                <button class="text-red-600 hover:underline ml-2" onclick="cancelOrder('${order.id}')">Cancel</button>
-              </td>
-            `;
-            tbody.appendChild(row);
-          });
-        });
+    async function fetchServices() {
+      const res = await fetch("/api/services");
+      const data = await res.json();
+      const serviceSelect = document.getElementById("service");
+      for (let key in data) {
+        const opt = new Option(data[key], key);
+        serviceSelect.appendChild(opt);
+      }
     }
 
-    loadOrders();
+    async function fetchCountries() {
+      const res = await fetch("/api/countries");
+      const data = await res.json();
+      const countrySelect = document.getElementById("country");
+      for (let key in data) {
+        const opt = new Option(data[key], key);
+        countrySelect.appendChild(opt);
+      }
+    }
 
-    // Submit form
-    document.getElementById('orderForm').addEventListener('submit', function (e) {
+    async function fetchAllServices() {
+      const res = await fetch("/api/all_services");
+      const data = await res.json();
+      const select = document.getElementById("all_service");
+      for (let key in data) {
+        const opt = new Option(`${key} - ${data[key]}`, key);
+        select.appendChild(opt);
+      }
+    }
+
+    async function fetchAllCountries() {
+      const res = await fetch("/api/all_countries");
+      const data = await res.json();
+      const select = document.getElementById("all_country");
+      for (let key in data) {
+        const opt = new Option(`${key} - ${data[key]}`, key);
+        select.appendChild(opt);
+      }
+    }
+
+    async function fetchBalance() {
+      const res = await fetch("/api/balance");
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById("balance").textContent = `Balance: $${data.balance}`;
+      }
+    }
+
+    async function fetchOrders() {
+      const res = await fetch("/order");
+      const data = await res.json();
+      const tbody = document.querySelector("#ordersTable tbody");
+      tbody.innerHTML = "";
+      data.forEach(order => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${order.id}</td>
+          <td>${order.number}</td>
+          <td>${order.service}</td>
+          <td>${order.country}</td>
+          <td>${order.status}</td>
+          <td>${order.created_at}</td>
+          <td>
+            <button class="btn btn-danger btn-sm" onclick="deleteOrder('${order.id}')">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function deleteOrder(orderId) {
+      await fetch(`/order/${orderId}`, { method: "DELETE" });
+      fetchOrders();
+    }
+
+    document.getElementById("orderForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const service = document.getElementById('service').value;
-      const country = document.getElementById('country').value;
-      fetch('/api/create', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({service, country})
-      })
-        .then(res => res.json())
-        .then(() => loadOrders());
+      const data = {
+        service: document.getElementById("service").value || document.getElementById("all_service").value,
+        country: document.getElementById("country").value || document.getElementById("all_country").value
+      };
+      const res = await fetch("/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert("Order created");
+        fetchOrders();
+      } else {
+        alert("Error: " + (result.error || "Failed"));
+      }
     });
 
-    function getStatus(id) {
-      fetch(`/api/status/${id}`)
-        .then(res => res.json())
-        .then(data => alert("Status: " + data.status + (data.sms ? `\nSMS: ${data.sms}` : "")));
-    }
-
-    function cancelOrder(id) {
-      fetch(`/api/cancel/${id}`, {method: 'POST'})
-        .then(() => loadOrders());
-    }
+    fetchServices();
+    fetchCountries();
+    fetchAllServices();
+    fetchAllCountries();
+    fetchBalance();
+    fetchOrders();
   </script>
-
 </body>
 </html>
