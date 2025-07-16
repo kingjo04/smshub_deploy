@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const refreshBtn = document.getElementById('refreshBtn');
     if (createOrderBtn) createOrderBtn.addEventListener('click', createOrder);
     if (refreshBtn) refreshBtn.addEventListener('click', updateStatuses);
+    console.log('DOM Loaded, buttons:', { createOrderBtn, refreshBtn });
 });
 
 // Fungsi utama
@@ -11,6 +12,7 @@ async function createOrder() {
     const btn = document.getElementById('createOrderBtn');
     if (!btn) {
         showNotification('❌ Error: Tombol Buat Order tidak ditemukan', 'error');
+        console.error('Button not found:', btn);
         return;
     }
 
@@ -40,6 +42,7 @@ async function createOrder() {
         
     } catch (error) {
         showNotification(`❌ Error: ${error.message || error}`, 'error');
+        console.error('Create order error:', error);
     } finally {
         if (btn) {
             btn.innerHTML = '🆕 Buat Order Baru';
@@ -52,8 +55,10 @@ async function createOrder() {
 function updateStatuses() {
     const activeTable = document.getElementById('activeOrders');
     const historyTable = document.getElementById('historyOrders');
+    console.log('Checking tables:', { activeTable, historyTable });
     if (!activeTable || !historyTable) {
         showNotification('❌ Error: Tabel order tidak ditemukan', 'error');
+        console.error('Tables not found:', { activeTable, historyTable });
         return;
     }
 
@@ -64,7 +69,10 @@ function updateStatuses() {
             updateOrderTable(data.history_orders, 'historyOrders');
             startRealtimeTimer();
         })
-        .catch(error => showNotification(`❌ Error: ${error}`, 'error'));
+        .catch(error => {
+            showNotification(`❌ Error: ${error}`, 'error');
+            console.error('Fetch orders error:', error);
+        });
 }
 
 // Fungsi tampilkan notifikasi
@@ -81,6 +89,7 @@ function updateOrderTable(orders, tableId) {
     const tableBody = document.getElementById(tableId)?.getElementsByTagName('tbody')[0];
     if (!tableBody) {
         showNotification(`❌ Error: Bagian tabel ${tableId} tidak ditemukan`, 'error');
+        console.error(`Table body ${tableId} not found:`, tableBody);
         return;
     }
     tableBody.innerHTML = '';
