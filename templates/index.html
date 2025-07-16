@@ -50,6 +50,7 @@
             <th class="px-4 py-2">Layanan</th>
             <th class="px-4 py-2">Negara</th>
             <th class="px-4 py-2">Status</th>
+            <th class="px-4 py-2">Sisa Waktu</th>
             <th class="px-4 py-2">Tanggal</th>
             <th class="px-4 py-2">Aksi</th>
           </tr>
@@ -75,6 +76,7 @@
               <th class="px-4 py-2">Negara</th>
               <th class="px-4 py-2">Status</th>
               <th class="px-4 py-2">Tanggal</th>
+              <th class="px-4 py-2">SMS</th>
             </tr>
           </thead>
           <tbody id="historyTableBody"></tbody>
@@ -126,6 +128,8 @@
     historyTbody.innerHTML = '';
 
     data.active_orders.forEach(order => {
+      const sisaMs = 20 * 60 * 1000 - (Date.now() - new Date(order.created_at).getTime());
+      const sisaMenit = Math.max(0, Math.floor(sisaMs / 60000)) + 'm';
       const row = document.createElement('tr');
       row.innerHTML = `
         <td class="px-4 py-2">${order.number}</td>
@@ -136,9 +140,10 @@
             ${order.status}
           </span>
         </td>
+        <td class="px-4 py-2">${sisaMenit}</td>
         <td class="px-4 py-2">${new Date(order.created_at).toLocaleString()}</td>
         <td class="px-4 py-2">
-          <button class="text-blue-600 hover:underline" onclick="getStatus('${order.id}')">Cek</button>
+          <button class="text-blue-600 hover:underline" onclick="requestAgain('${order.id}')">Minta Ulang SMS</button>
           <button class="text-red-600 hover:underline ml-2" onclick="cancelOrder('${order.id}')">Cancel</button>
         </td>
       `;
@@ -153,19 +158,20 @@
         <td class="px-4 py-2">${order.country}</td>
         <td class="px-4 py-2">${order.status}</td>
         <td class="px-4 py-2">${new Date(order.created_at).toLocaleString()}</td>
+        <td class="px-4 py-2">${order.sms || '-'}</td>
       `;
       historyTbody.appendChild(row);
     });
   }
 
-  function getStatus(id) {
-    fetch(`/api/status/${id}`)
-      .then(res => res.json())
-      .then(data => alert("Status: " + data.status + (data.sms ? `\nSMS: ${data.sms}` : "")));
-  }
-
   function cancelOrder(id) {
     fetch(`/api/cancel/${id}`, {method: 'POST'}).then(() => loadOrders());
+  }
+
+  function requestAgain(id) {
+    fetch(`/api/request_again/${id}`, {method: 'POST'})
+      .then(res => res.json())
+      .then(() => loadOrders());
   }
 
   document.getElementById('orderForm').addEventListener('submit', function (e) {
